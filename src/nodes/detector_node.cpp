@@ -10,12 +10,24 @@
 #endif
 #include <chrono>
 
+#include <lifecycle_msgs/msg/state.hpp>
+#include <lifecycle_msgs/msg/transition.hpp>
+
 namespace ros2_yolos_cpp {
 
 YolosDetectorNode::YolosDetectorNode(const rclcpp::NodeOptions& options)
   : rclcpp_lifecycle::LifecycleNode("yolos_detector", options) {
   RCLCPP_INFO(get_logger(), "YolosDetectorNode created");
   declareParameters();
+
+  // Lifecycle state to start in (lifecycle_msgs/State ids): 1 unconfigured, 2 inactive, 3 active
+  const auto startup_state = get_parameter("startup_state").as_int();
+  if (startup_state > lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED) {
+    trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
+  }
+  if (startup_state > lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
+    trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
+  }
 }
 
 void YolosDetectorNode::declareParameters() {
@@ -30,6 +42,7 @@ void YolosDetectorNode::declareParameters() {
   declare_parameter("yolo_version", "auto");
   declare_parameter("publish_debug_image", false);
   declare_parameter("publish_timing", false);
+  declare_parameter("startup_state", static_cast<int64_t>(lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED));
 }
 
 YolosConfig YolosDetectorNode::loadConfig() {

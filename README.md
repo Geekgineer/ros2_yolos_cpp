@@ -176,6 +176,7 @@ Nodes can be configured via launch arguments or a YAML parameter file. See `conf
 | `nms_threshold` | double | `0.45` | IoU threshold for Non-Maximum Suppression. |
 | `image_topic` | string | `/camera/image_raw` | Topic to subscribe for input images. |
 | `publish_debug_image` | bool | `true` | Publish standard `sensor_msgs/Image` with visualizations. |
+| `startup_state` | int | `1` | Detector only: lifecycle state to start in, `1` unconfigured, `2` inactive (configured), `3` active. |
 
 ### TensorRT
 
