@@ -7,6 +7,9 @@
     model_path: ""              # Required: Path to ONNX model
     labels_path: ""             # Required: Path to class names file
     use_gpu: false              # Enable CUDA acceleration
+    use_tensorrt: false         # With use_gpu: TensorRT execution provider first, CUDA as fallback
+    tensorrt_fp16: true         # Build the TensorRT engine with FP16 precision
+    tensorrt_cache_path: ""     # Directory of the engine cache, empty: build the engine at every start
     yolo_version: "auto"        # auto, v7, v8, v10, v11, v26, nas
     
     # Detection Thresholds

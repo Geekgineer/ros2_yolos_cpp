@@ -136,9 +136,11 @@ message(STATUS "ONNX Runtime lib: ${ONNXRUNTIME_LIB}")
 # =============================================================================
 # YOLOs-CPP Library - Download at Configuration Time
 # =============================================================================
-set(YOLOS_CPP_VERSION "master")
+# Branch, tag or commit of YOLOs-CPP. patches/yolos_cpp_tensorrt.patch was made for commit 2e50d31; pin it with
+# -DYOLOS_CPP_VERSION=2e50d31f0837e96160b72a3311d8a5d4e30b0e47 for reproducible builds.
+set(YOLOS_CPP_VERSION "master" CACHE STRING "YOLOs-CPP branch, tag or commit to download")
 set(YOLOS_CPP_DIR "${CMAKE_BINARY_DIR}/YOLOs-CPP")
-set(YOLOS_CPP_URL "https://github.com/Geekgineer/YOLOs-CPP/archive/refs/heads/${YOLOS_CPP_VERSION}.tar.gz")
+set(YOLOS_CPP_URL "https://github.com/Geekgineer/YOLOs-CPP/archive/${YOLOS_CPP_VERSION}.tar.gz")
 
 if(NOT EXISTS "${YOLOS_CPP_DIR}/include/yolos/yolos.hpp")
   message(STATUS "Downloading YOLOs-CPP from: ${YOLOS_CPP_URL}")
@@ -181,9 +183,43 @@ if(NOT EXISTS "${YOLOS_CPP_DIR}/include/yolos/yolos.hpp")
   # Rename to standard build directory
   file(RENAME "${EXTRACTED_DIR}" "${YOLOS_CPP_DIR}")
   file(REMOVE "${CMAKE_BINARY_DIR}/yolos_cpp.tar.gz")
+
+  # TensorRT execution provider (yolos::tensorRTOptions), unless this YOLOs-CPP version already provides it
+  set(YOLOS_SESSION_BASE "")
+  if(EXISTS "${YOLOS_CPP_DIR}/include/yolos/core/session_base.hpp")
+    file(READ "${YOLOS_CPP_DIR}/include/yolos/core/session_base.hpp" YOLOS_SESSION_BASE)
+  endif()
+  if(NOT YOLOS_SESSION_BASE MATCHES "tensorRTOptions")
+    find_package(Git QUIET)
+    set(PATCH_RESULT 1)
+    if(GIT_FOUND)
+      execute_process(
+        COMMAND ${GIT_EXECUTABLE} apply "${CMAKE_CURRENT_SOURCE_DIR}/patches/yolos_cpp_tensorrt.patch"
+        WORKING_DIRECTORY "${YOLOS_CPP_DIR}"
+        RESULT_VARIABLE PATCH_RESULT
+        ERROR_QUIET
+      )
+    endif()
+    if(NOT PATCH_RESULT EQUAL 0)
+      message(WARNING "Could not apply patches/yolos_cpp_tensorrt.patch to YOLOs-CPP ${YOLOS_CPP_VERSION}, "
+                      "building without TensorRT support (use_tensorrt)")
+    endif()
+  endif()
 endif()
 
 message(STATUS "YOLOs-CPP Source: ${YOLOS_CPP_DIR}")
+
+# TensorRT settings in YOLOs-CPP (yolos::tensorRTOptions), patched in above or provided by YOLOs-CPP itself
+set(YOLOS_SESSION_BASE "")
+if(EXISTS "${YOLOS_CPP_DIR}/include/yolos/core/session_base.hpp")
+  file(READ "${YOLOS_CPP_DIR}/include/yolos/core/session_base.hpp" YOLOS_SESSION_BASE)
+endif()
+if(YOLOS_SESSION_BASE MATCHES "tensorRTOptions")
+  set(YOLOS_CPP_HAS_TENSORRT ON)
+else()
+  set(YOLOS_CPP_HAS_TENSORRT OFF)
+endif()
+message(STATUS "YOLOs-CPP TensorRT support: ${YOLOS_CPP_HAS_TENSORRT}")
 
 # =============================================================================
 # Custom Messages (OBB Detection)
@@ -234,6 +270,10 @@ target_include_directories(${PROJECT_NAME}_components PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
+
+if(YOLOS_CPP_HAS_TENSORRT)
+  target_compile_definitions(${PROJECT_NAME}_components PRIVATE YOLOS_CPP_HAS_TENSORRT)
+endif()
 
 target_link_libraries(${PROJECT_NAME}_components
   ${ONNXRUNTIME_LIB}

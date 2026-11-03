@@ -17,6 +17,9 @@ void YolosOBBNode::declareParameters() {
   declare_parameter("model_path", rclcpp::PARAMETER_STRING);
   declare_parameter("labels_path", rclcpp::PARAMETER_STRING);
   declare_parameter("use_gpu", false);
+  declare_parameter("use_tensorrt", false);
+  declare_parameter("tensorrt_fp16", true);
+  declare_parameter("tensorrt_cache_path", "");
   declare_parameter("conf_threshold", 0.25);
   declare_parameter("nms_threshold", 0.45);
   declare_parameter("max_detections", 300);
@@ -28,6 +31,9 @@ YolosConfig YolosOBBNode::loadConfig() {
   c.model_path = get_parameter("model_path").as_string();
   c.labels_path = get_parameter("labels_path").as_string();
   c.use_gpu = get_parameter("use_gpu").as_bool();
+  c.use_tensorrt = get_parameter("use_tensorrt").as_bool();
+  c.tensorrt_fp16 = get_parameter("tensorrt_fp16").as_bool();
+  c.tensorrt_cache_path = get_parameter("tensorrt_cache_path").as_string();
   c.conf_threshold = static_cast<float>(get_parameter("conf_threshold").as_double());
   c.nms_threshold = static_cast<float>(get_parameter("nms_threshold").as_double());
   conf_ = c.conf_threshold; nms_ = c.nms_threshold;

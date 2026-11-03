@@ -3,6 +3,7 @@
 
 #include "ros2_yolos_cpp/adapters/classifier_adapter.hpp"
 #include "yolos/yolos.hpp"
+#include "tensorrt_options.hpp"
 #include <iostream>
 
 namespace ros2_yolos_cpp {
@@ -21,6 +22,7 @@ ClassifierAdapter& ClassifierAdapter::operator=(ClassifierAdapter&&) noexcept = 
 
 bool ClassifierAdapter::initialize(const YolosConfig& config) {
   try {
+    applyTensorRTOptions(config, "ClassifierAdapter");
     impl_->classifier = std::make_unique<yolos::cls::YOLOClassifier>(
       config.model_path,
       config.labels_path,

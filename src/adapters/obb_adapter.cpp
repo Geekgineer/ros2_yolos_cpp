@@ -3,6 +3,7 @@
 
 #include "ros2_yolos_cpp/adapters/obb_adapter.hpp"
 #include "yolos/yolos.hpp"
+#include "tensorrt_options.hpp"
 #include <iostream>
 
 namespace ros2_yolos_cpp {
@@ -21,6 +22,7 @@ OBBAdapter& OBBAdapter::operator=(OBBAdapter&&) noexcept = default;
 
 bool OBBAdapter::initialize(const YolosConfig& config) {
   try {
+    applyTensorRTOptions(config, "OBBAdapter");
     impl_->detector = std::make_unique<yolos::obb::YOLOOBBDetector>(
       config.model_path,
       config.labels_path,

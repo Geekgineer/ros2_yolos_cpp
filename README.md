@@ -169,10 +169,28 @@ Nodes can be configured via launch arguments or a YAML parameter file. See `conf
 | `model_path` | string | **Required** | Absolute path to `.onnx` model file. |
 | `labels_path` | string | "" | Path to text file with class names (one per line). |
 | `use_gpu` | bool | `false` | Enable CUDA acceleration (requires GPU build). |
+| `use_tensorrt` | bool | `false` | With `use_gpu`: use the TensorRT execution provider of ONNX Runtime first, CUDA for the nodes it does not support (requires an ONNX Runtime built with TensorRT). |
+| `tensorrt_fp16` | bool | `true` | Build the TensorRT engine with FP16 precision. |
+| `tensorrt_cache_path` | string | `""` | Directory of the TensorRT engine and timing cache. Building an engine takes minutes on a Jetson; with a cache, later starts load it in seconds. Empty: no cache. |
 | `conf_threshold` | double | `0.4` | Minimum confidence score to output detection. |
 | `nms_threshold` | double | `0.45` | IoU threshold for Non-Maximum Suppression. |
 | `image_topic` | string | `/camera/image_raw` | Topic to subscribe for input images. |
 | `publish_debug_image` | bool | `true` | Publish standard `sensor_msgs/Image` with visualizations. |
+| `startup_state` | int | `1` | Detector only: lifecycle state to start in, `1` unconfigured, `2` inactive (configured), `3` active. |
+
+### TensorRT
+
+`use_tensorrt` needs an ONNX Runtime with the TensorRT execution provider (`libonnxruntime_providers_tensorrt.so`)
+and the TensorRT libraries at runtime; without them the nodes fall back to CUDA (log: `Inference device: GPU (CUDA)`).
+YOLOs-CPP is downloaded at configure time and patched with `patches/yolos_cpp_tensorrt.patch` for the TensorRT
+settings. The patch was made for commit `2e50d31`, so pin that commit for reproducible builds:
+
+```bash
+colcon build --packages-select ros2_yolos_cpp --cmake-args -DCMAKE_BUILD_TYPE=Release \
+  -DYOLOS_CPP_VERSION=2e50d31f0837e96160b72a3311d8a5d4e30b0e47
+```
+
+If the patch does not apply to another version, the package builds without TensorRT support and warns about it.
 
 ### Topics
 

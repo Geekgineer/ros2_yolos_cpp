@@ -1,0 +1,81 @@
+diff --git a/include/yolos/core/session_base.hpp b/include/yolos/core/session_base.hpp
+index 521313d..5694965 100644
+--- a/include/yolos/core/session_base.hpp
++++ b/include/yolos/core/session_base.hpp
+@@ -26,6 +26,26 @@
+ 
+ namespace yolos {
+ 
++// ============================================================================
++// TensorRT execution provider settings
++// ============================================================================
++
++/// @brief Settings of the TensorRT execution provider. Sessions created with useGPU try it first when enabled and
++/// ONNX Runtime provides it, with CUDA as fallback for the nodes TensorRT does not support.
++struct TensorRTOptions {
++    bool enable{false};
++    bool fp16{true};
++    /// Directory for the engine and timing caches. Building an engine takes minutes on a Jetson, a cache makes
++    /// later starts load it in seconds. Empty: no cache.
++    std::string cachePath;
++};
++
++/// @brief Process-wide TensorRT settings, used by every session created afterwards
++inline TensorRTOptions& tensorRTOptions() {
++    static TensorRTOptions options;
++    return options;
++}
++
+ // ============================================================================
+ // OrtSessionBase - Common ONNX Runtime session management
+ // ============================================================================
+@@ -269,13 +289,46 @@ private:
+         // Configure execution provider
+         std::vector<std::string> availableProviders = Ort::GetAvailableProviders();
+         auto cudaIt = std::find(availableProviders.begin(), availableProviders.end(), "CUDAExecutionProvider");
++        auto trtIt = std::find(availableProviders.begin(), availableProviders.end(), "TensorrtExecutionProvider");
++        const TensorRTOptions& trt = tensorRTOptions();
+ 
++        if (useGPU && trt.enable && trtIt == availableProviders.end()) {
++            std::cout << "[WARNING] TensorRT requested but not available in ONNX Runtime." << std::endl;
++        }
++        if (useGPU && trt.enable && trtIt != availableProviders.end()) {
++            // The provider library loads TensorRT only here, so missing TensorRT libraries show up as an exception
++            try {
++                const OrtApi& api = Ort::GetApi();
++                OrtTensorRTProviderOptionsV2* trtOptions = nullptr;
++                Ort::ThrowOnError(api.CreateTensorRTProviderOptions(&trtOptions));
++                std::unique_ptr<OrtTensorRTProviderOptionsV2, decltype(api.ReleaseTensorRTProviderOptions)> trtGuard(
++                    trtOptions, api.ReleaseTensorRTProviderOptions);
++                const char* cache = trt.cachePath.empty() ? "0" : "1";
++                std::vector<const char*> keys{"device_id", "trt_fp16_enable", "trt_engine_cache_enable",
++                                              "trt_timing_cache_enable"};
++                std::vector<const char*> values{"0", trt.fp16 ? "1" : "0", cache, cache};
++                if (!trt.cachePath.empty()) {
++                    keys.push_back("trt_engine_cache_path");
++                    values.push_back(trt.cachePath.c_str());
++                }
++                Ort::ThrowOnError(
++                    api.UpdateTensorRTProviderOptions(trtOptions, keys.data(), values.data(), keys.size()));
++                sessionOptions_.AppendExecutionProvider_TensorRT_V2(*trtOptions);
++                device_ = "gpu";
++                std::cout << "[INFO] Inference device: GPU (TensorRT" << (trt.fp16 ? ", FP16" : "")
++                          << (trt.cachePath.empty() ? "" : ", engine cache " + trt.cachePath) << ")" << std::endl;
++            } catch (const Ort::Exception& e) {
++                std::cout << "[WARNING] TensorRT not usable, falling back to CUDA: " << e.what() << std::endl;
++            }
++        }
+         if (useGPU && cudaIt != availableProviders.end()) {
+             OrtCUDAProviderOptions cudaOptions{};
+             sessionOptions_.AppendExecutionProvider_CUDA(cudaOptions);
+-            device_ = "gpu";
+-            std::cout << "[INFO] Inference device: GPU (CUDA)" << std::endl;
+-        } else {
++            if (device_ != "gpu") {
++                device_ = "gpu";
++                std::cout << "[INFO] Inference device: GPU (CUDA)" << std::endl;
++            }
++        } else if (device_ != "gpu") {
+             if (useGPU) {
+                 std::cout << "[WARNING] GPU requested but CUDA not available. Falling back to CPU." << std::endl;
+             }

@@ -3,6 +3,7 @@
 
 #include "ros2_yolos_cpp/adapters/segmentor_adapter.hpp"
 #include "yolos/yolos.hpp"
+#include "tensorrt_options.hpp"
 
 #include <iostream>
 
@@ -22,6 +23,7 @@ SegmentorAdapter& SegmentorAdapter::operator=(SegmentorAdapter&&) noexcept = def
 
 bool SegmentorAdapter::initialize(const YolosConfig& config) {
   try {
+    applyTensorRTOptions(config, "SegmentorAdapter");
     impl_->segmentor = std::make_unique<yolos::seg::YOLOSegDetector>(
       config.model_path,
       config.labels_path,

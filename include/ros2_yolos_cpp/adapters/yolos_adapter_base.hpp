@@ -31,6 +31,9 @@ struct YolosConfig {
   std::string model_path;
   std::string labels_path;
   bool use_gpu{false};
+  bool use_tensorrt{false};  // TensorRT execution provider (with use_gpu), CUDA as fallback
+  bool tensorrt_fp16{true};
+  std::string tensorrt_cache_path;  // Engine cache directory, empty: no cache
   float conf_threshold{0.4f};
   float nms_threshold{0.45f};
   std::string yolo_version{"auto"};  // auto, v7, v8, v10, v11, v26, nas

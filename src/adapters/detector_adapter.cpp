@@ -5,6 +5,7 @@
 
 // YOLOs-CPP includes - ONLY in implementation file
 #include "yolos/yolos.hpp"
+#include "tensorrt_options.hpp"
 
 #include <stdexcept>
 #include <iostream>
@@ -45,6 +46,7 @@ DetectorAdapter& DetectorAdapter::operator=(DetectorAdapter&&) noexcept = defaul
 
 bool DetectorAdapter::initialize(const YolosConfig& config) {
   try {
+    applyTensorRTOptions(config, "DetectorAdapter");
     auto version = Impl::parseVersion(config.yolo_version);
     
     impl_->detector = yolos::det::createDetector(

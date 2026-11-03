@@ -17,6 +17,9 @@ void YolosClassifierNode::declareParameters() {
   declare_parameter("model_path", rclcpp::PARAMETER_STRING);
   declare_parameter("labels_path", rclcpp::PARAMETER_STRING);
   declare_parameter("use_gpu", false);
+  declare_parameter("use_tensorrt", false);
+  declare_parameter("tensorrt_fp16", true);
+  declare_parameter("tensorrt_cache_path", "");
   declare_parameter("publish_debug_image", false);
 }
 
@@ -25,6 +28,9 @@ YolosConfig YolosClassifierNode::loadConfig() {
   c.model_path = get_parameter("model_path").as_string();
   c.labels_path = get_parameter("labels_path").as_string();
   c.use_gpu = get_parameter("use_gpu").as_bool();
+  c.use_tensorrt = get_parameter("use_tensorrt").as_bool();
+  c.tensorrt_fp16 = get_parameter("tensorrt_fp16").as_bool();
+  c.tensorrt_cache_path = get_parameter("tensorrt_cache_path").as_string();
   debug_ = get_parameter("publish_debug_image").as_bool();
   return c;
 }
